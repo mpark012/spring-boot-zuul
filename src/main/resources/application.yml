@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: zuul-server
+#zuul.routes is for routing.  Below, it routes /book to the url specified below.
+#book is the application name specified by spring.application.name property
+#Here since we are going to use eureka discovery service, we don't need this.
+#See the uncommented zuul section below to be used with Eureka.
+#However, if we are not going to use eureka, then this will work to route to
+#the service.  In this case, set ribbon.eureka.enabled to false and remove
+#"eureka" section below.
+#zuul:
+#  routes:
+#    book:
+#      url: http://localhost:8762
+
+server:
+  port: 8762
+
+# To confirm, test this url: http://localhost:8762/ccs/currency-converter/from/EUR/to/INR/quantity/10000
+# 8762 is zuul (gateway), ccs is defined below for currency-conversion-service, and the rest path is from currency-conversion-service controller mapping! yay!
+zuul:  #proxy server
+  routes:
+    orchestration-service:
+      path: /orch-service/**
+      serviceId: orchestration-service  #Eureka has this value registered for book application
+      stripPrefix: true
+    currency-conversion-service:
+      path: /ccs/**
+      serviceId: currency-conversion-service #Eureka has this value registered for book application
+      stripPrefix: true
+
+#Ribbon is integrated with Zuul.  Netflix Zuul uses Ribon to perform client-side load balancing.  
+#By default, Ribbon would use Eureka for Service Discovery. Thus, enable this (below) so that zuul section
+#above can use serviceId to look up the service name.
+ribbon:
+  eureka:
+    enabled: true  #This is service discovery server, eureka, to be enabled.  eureka port number: 8761.  Zuul uses Netflix Ribbon to
+                   #look up for all instances of the service from the service discovery (Eureka)
+
+service-providers:
+  forexServiceUriTemplate: /currency-exchange/from/{from}/to/{to}
+  bookAvailableServiceUriTemplate: /available
+  bookCheckedOutServiceUriTemplate: /checked-out
+
+eureka:
+  client:
+    registerWithEureka: true
+    fetchRegistry: true
+    preferIpAddress: true
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
